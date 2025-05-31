@@ -85,63 +85,33 @@ const StudentCourseDetail = () => {
         try {
           const { data: modulesData, error: modulesError } = await supabase
             .from('course_modules')
-            .select(`
-              *,
-              module_videos!fk_module_videos_module_id (*)
-            `)
+            .select('*')
             .eq('course_id', id)
             .order('order_index');
 
           if (modulesError) {
-            console.log('CourseDetail: Trying alternative relationship:', modulesError);
-            const { data: altModulesData, error: altModulesError } = await supabase
-              .from('course_modules')
-              .select(`
-                *,
-                module_videos!module_videos_module_id_fkey (*)
-              `)
-              .eq('course_id', id)
-              .order('order_index');
-
-            if (altModulesError) {
-              console.log('CourseDetail: Trying simple fetch:', altModulesError);
-              const { data: simpleModulesData, error: simpleModulesError } = await supabase
-                .from('course_modules')
-                .select('*')
-                .eq('course_id', id)
-                .order('order_index');
-
-              if (simpleModulesError) {
-                console.log('CourseDetail: All module queries failed:', simpleModulesError);
-                setModules([]);
-              } else if (simpleModulesData) {
-                const modulesWithVideos = await Promise.all(
-                  simpleModulesData.map(async (module) => {
-                    const { data: videos, error: videosError } = await supabase
-                      .from('module_videos')
-                      .select('*')
-                      .eq('module_id', module.id)
-                      .order('order_index');
-
-                    if (videosError) {
-                      console.error('Error fetching videos for module:', module.id, videosError);
-                      return { ...module, module_videos: [] };
-                    }
-
-                    return { ...module, module_videos: videos || [] };
-                  })
-                );
-
-                console.log('CourseDetail: Modules with videos fetched:', modulesWithVideos);
-                setModules(modulesWithVideos);
-              }
-            } else if (altModulesData) {
-              console.log('CourseDetail: Alternative modules fetched:', altModulesData);
-              setModules(altModulesData);
-            }
+            console.log('CourseDetail: Error fetching modules:', modulesError);
+            setModules([]);
           } else if (modulesData) {
-            console.log('CourseDetail: Modules fetched:', modulesData);
-            setModules(modulesData);
+            const modulesWithVideos = await Promise.all(
+              modulesData.map(async (module) => {
+                const { data: videos, error: videosError } = await supabase
+                  .from('module_videos')
+                  .select('*')
+                  .eq('module_id', module.id)
+                  .order('order_index');
+
+                if (videosError) {
+                  console.error('Error fetching videos for module:', module.id, videosError);
+                  return { ...module, module_videos: [] };
+                }
+
+                return { ...module, module_videos: videos || [] };
+              })
+            );
+
+            console.log('CourseDetail: Modules with videos fetched:', modulesWithVideos);
+            setModules(modulesWithVideos);
           }
         } catch (moduleError) {
           console.log('CourseDetail: Modules not available:', moduleError);
@@ -211,12 +181,19 @@ const StudentCourseDetail = () => {
 
     try {
       console.log('CourseDetail: Enrolling in course:', id);
+      
+      // Calculate total videos in the course
+      const totalVideos = modules.reduce((acc, module) => acc + (module.module_videos?.length || 0), 0);
+      console.log('Total videos in course:', totalVideos);
+      
       const { error } = await supabase
         .from('enrollments')
         .insert([{
           user_id: user.id,
           course_id: id,
-          progress: 0
+          progress: 0,
+          total_videos: totalVideos,
+          videos_watched: 0
         }]);
 
       if (error) {

@@ -37,6 +37,12 @@ interface Video {
   order_index: number;
 }
 
+interface Enrollment {
+  total_videos: number;
+  videos_watched: number;
+  progress: number;
+}
+
 const StudentCoursePlayer = () => {
   const { courseId } = useParams();
   const { user } = useAuth();
@@ -45,32 +51,15 @@ const StudentCoursePlayer = () => {
   const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
   const [completedVideos, setCompletedVideos] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentProgress, setCurrentProgress] = useState(0);
+  const [enrollment, setEnrollment] = useState<Enrollment | null>(null);
 
   useEffect(() => {
     if (courseId && user) {
       fetchCourseData();
       fetchUserProgress();
+      fetchEnrollmentData();
     }
   }, [courseId, user]);
-
-  useEffect(() => {
-    const totalVideos = modules.reduce((acc, module) => acc + (module.module_videos?.length || 0), 0);
-    const completedCount = completedVideos.length;
-    const progressPercentage = totalVideos > 0 ? Math.round((completedCount / totalVideos) * 100) : 0;
-    
-    console.log('Progress calculation:', {
-      totalVideos,
-      completedCount,
-      progressPercentage,
-      currentProgress
-    });
-
-    if (progressPercentage !== currentProgress) {
-      setCurrentProgress(progressPercentage);
-      updateEnrollmentProgress(progressPercentage, completedVideos);
-    }
-  }, [completedVideos, modules]);
 
   const fetchCourseData = async () => {
     if (!courseId) return;
@@ -161,8 +150,32 @@ const StudentCoursePlayer = () => {
     }
   };
 
+  const fetchEnrollmentData = async () => {
+    if (!courseId || !user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('enrollments')
+        .select('total_videos, videos_watched, progress')
+        .eq('user_id', user.id)
+        .eq('course_id', courseId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching enrollment data:', error);
+        return;
+      }
+
+      if (data) {
+        setEnrollment(data);
+      }
+    } catch (error) {
+      console.error('Error fetching enrollment data:', error);
+    }
+  };
+
   const toggleVideoCompletion = async (videoId: string) => {
-    if (!user) return;
+    if (!user || !courseId) return;
 
     const isCompleted = completedVideos.includes(videoId);
 
@@ -181,6 +194,9 @@ const StudentCoursePlayer = () => {
 
         const newCompletedVideos = completedVideos.filter(id => id !== videoId);
         setCompletedVideos(newCompletedVideos);
+        
+        // Update enrollment videos_watched count
+        await updateEnrollmentProgress(newCompletedVideos.length);
         
         toast({
           title: "Video marked as incomplete",
@@ -204,6 +220,9 @@ const StudentCoursePlayer = () => {
         const newCompletedVideos = [...completedVideos, videoId];
         setCompletedVideos(newCompletedVideos);
 
+        // Update enrollment videos_watched count
+        await updateEnrollmentProgress(newCompletedVideos.length);
+
         toast({
           title: "Video completed!",
           description: "Great job! Keep up the learning momentum.",
@@ -214,22 +233,37 @@ const StudentCoursePlayer = () => {
     }
   };
 
-  const updateEnrollmentProgress = async (progressPercentage: number, completedVideosList: string[]) => {
-    if (!courseId || !user) return;
+  const updateEnrollmentProgress = async (videosWatched: number) => {
+    if (!courseId || !user || !enrollment) return;
 
     try {
-      console.log('Updating enrollment progress to:', progressPercentage);
+      const totalVideos = enrollment.total_videos;
+      const progressPercentage = totalVideos > 0 ? Math.round((videosWatched / totalVideos) * 100) : 0;
+      
+      console.log('Updating enrollment progress:', {
+        videosWatched,
+        totalVideos,
+        progressPercentage
+      });
 
       const { error } = await supabase
         .from('enrollments')
-        .update({ progress: progressPercentage })
+        .update({ 
+          videos_watched: videosWatched,
+          progress: progressPercentage 
+        })
         .eq('user_id', user.id)
         .eq('course_id', courseId);
 
       if (error) {
         console.error('Error updating enrollment progress:', error);
       } else {
-        console.log('Enrollment progress updated successfully to:', progressPercentage);
+        setEnrollment(prev => prev ? {
+          ...prev,
+          videos_watched: videosWatched,
+          progress: progressPercentage
+        } : null);
+        console.log('Enrollment progress updated successfully');
       }
     } catch (error) {
       console.error('Error updating enrollment progress:', error);
@@ -263,6 +297,7 @@ const StudentCoursePlayer = () => {
 
   const totalVideos = modules.reduce((acc, module) => acc + (module.module_videos?.length || 0), 0);
   const completedCount = completedVideos.length;
+  const currentProgress = enrollment?.progress || 0;
 
   return (
     <Layout>
@@ -284,7 +319,7 @@ const StudentCoursePlayer = () => {
               <p className="text-slate-600">
                 Progress: <span className="font-semibold text-blue-600">{currentProgress}%</span> 
                 <span className="text-slate-400 mx-2">•</span>
-                {completedCount}/{totalVideos} videos completed
+                {enrollment?.videos_watched || 0}/{enrollment?.total_videos || totalVideos} videos completed
               </p>
             </div>
           </div>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '../../components/Layout';
@@ -25,6 +24,8 @@ interface Enrollment {
   course_id: string;
   progress: number;
   enrolled_at: string;
+  total_videos: number;
+  videos_watched: number;
   courses: Course;
 }
 
@@ -58,6 +59,8 @@ const StudentMyLearning = () => {
           course_id,
           progress,
           enrolled_at,
+          total_videos,
+          videos_watched,
           courses!enrollments_course_id_fkey (
             id,
             title,
@@ -166,6 +169,8 @@ const StudentMyLearning = () => {
             {enrolledCourses.map((enrollment) => {
               const course = enrollment.courses;
               const progress = enrollment.progress || 0;
+              const videosWatched = enrollment.videos_watched || 0;
+              const totalVideos = enrollment.total_videos || 0;
               
               return (
                 <Card key={enrollment.course_id} className="group border-0 shadow-lg hover:shadow-2xl transition-all duration-500 bg-white/90 backdrop-blur-lg overflow-hidden">
@@ -206,6 +211,9 @@ const StudentMyLearning = () => {
                         <Progress value={progress} className="h-2 bg-slate-100" />
                         <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full" 
                              style={{ width: `${progress}%` }}></div>
+                      </div>
+                      <div className="text-xs text-slate-500 text-center">
+                        {videosWatched} of {totalVideos} videos completed
                       </div>
                     </div>
                     
