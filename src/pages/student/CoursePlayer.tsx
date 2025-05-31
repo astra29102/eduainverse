@@ -8,18 +8,7 @@ import { ArrowLeft, Play, CheckCircle, PlayCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '../../contexts/AuthContext';
-
-interface Course {
-  id: string;
-  title: string;
-  description: string;
-  instructor: string;
-  difficulty: string;
-  duration: string;
-  thumbnail: string;
-  category: string;
-  enrollment_count: number;
-}
+import { Course, Enrollment } from '../../types/enrollment';
 
 interface Module {
   id: string;
@@ -35,12 +24,6 @@ interface Video {
   youtube_url: string;
   duration: string;
   order_index: number;
-}
-
-interface Enrollment {
-  total_videos: number;
-  videos_watched: number;
-  progress: number;
 }
 
 const StudentCoursePlayer = () => {
@@ -156,51 +139,42 @@ const StudentCoursePlayer = () => {
     try {
       console.log('Fetching enrollment data for course:', courseId, 'user:', user.id);
       
-      // Try to fetch with new columns first
       const { data, error } = await supabase
         .from('enrollments')
-        .select('total_videos, videos_watched, progress')
+        .select('id, course_id, user_id, enrolled_at, progress, total_videos, videos_watched')
         .eq('user_id', user.id)
         .eq('course_id', courseId)
         .single();
 
       if (error) {
-        console.error('Error fetching enrollment data (trying fallback):', error);
-        
-        // Fallback: try without new columns
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from('enrollments')
-          .select('progress')
-          .eq('user_id', user.id)
-          .eq('course_id', courseId)
-          .single();
-
-        if (fallbackError) {
-          console.error('Error fetching enrollment data (fallback):', fallbackError);
-          setEnrollment({ total_videos: 0, videos_watched: 0, progress: 0 });
-          return;
-        }
-        
-        // Set default values with fallback progress
-        const defaultEnrollment = { 
+        console.error('Error fetching enrollment data:', error);
+        setEnrollment({ 
+          id: '',
+          course_id: courseId,
+          user_id: user.id,
+          enrolled_at: new Date().toISOString(),
           total_videos: 0, 
           videos_watched: 0, 
-          progress: fallbackData?.progress || 0 
-        };
-        console.log('Setting default enrollment data:', defaultEnrollment);
-        setEnrollment(defaultEnrollment);
+          progress: 0 
+        });
         return;
       }
 
       if (data) {
         console.log('Enrollment data fetched:', data);
         setEnrollment(data);
-      } else {
-        setEnrollment({ total_videos: 0, videos_watched: 0, progress: 0 });
       }
     } catch (error) {
       console.error('Error fetching enrollment data:', error);
-      setEnrollment({ total_videos: 0, videos_watched: 0, progress: 0 });
+      setEnrollment({ 
+        id: '',
+        course_id: courseId || '',
+        user_id: user?.id || '',
+        enrolled_at: new Date().toISOString(),
+        total_videos: 0, 
+        videos_watched: 0, 
+        progress: 0 
+      });
     }
   };
 
@@ -295,8 +269,7 @@ const StudentCoursePlayer = () => {
         progressPercentage
       });
 
-      // Try to update enrollment with new columns
-      const { error: updateError } = await supabase
+      const { error } = await supabase
         .from('enrollments')
         .update({ 
           videos_watched: videosWatched,
@@ -306,30 +279,20 @@ const StudentCoursePlayer = () => {
         .eq('user_id', user.id)
         .eq('course_id', courseId);
 
-      if (updateError) {
-        console.error('Error updating enrollment progress (trying fallback):', updateError);
-        // Fallback: update only progress if new columns don't exist
-        const { error: fallbackError } = await supabase
-          .from('enrollments')
-          .update({ progress: progressPercentage })
-          .eq('user_id', user.id)
-          .eq('course_id', courseId);
-
-        if (fallbackError) {
-          console.error('Error updating enrollment progress (fallback):', fallbackError);
-        } else {
-          console.log('Enrollment progress updated (fallback) successfully');
-        }
-      } else {
-        console.log('Enrollment progress updated successfully');
+      if (error) {
+        console.error('Error updating enrollment progress:', error);
+        throw error;
       }
 
+      console.log('Enrollment progress updated successfully');
+
       // Update local state
-      setEnrollment(prev => ({
+      setEnrollment(prev => prev ? {
+        ...prev,
         total_videos: totalVideos,
         videos_watched: videosWatched,
         progress: progressPercentage
-      }));
+      } : null);
 
     } catch (error) {
       console.error('Error updating enrollment progress:', error);
@@ -361,8 +324,8 @@ const StudentCoursePlayer = () => {
     );
   }
 
-  const totalVideos = modules.reduce((acc, module) => acc + (module.module_videos?.length || 0), 0);
-  const completedCount = completedVideos.length;
+  const totalVideos = enrollment?.total_videos || modules.reduce((acc, module) => acc + (module.module_videos?.length || 0), 0);
+  const completedCount = enrollment?.videos_watched || completedVideos.length;
   const currentProgress = enrollment?.progress || 0;
 
   return (
@@ -385,7 +348,7 @@ const StudentCoursePlayer = () => {
               <p className="text-slate-600">
                 Progress: <span className="font-semibold text-blue-600">{currentProgress}%</span> 
                 <span className="text-slate-400 mx-2">•</span>
-                {enrollment?.videos_watched || completedCount}/{enrollment?.total_videos || totalVideos} videos completed
+                {completedCount}/{totalVideos} videos completed
               </p>
             </div>
           </div>
