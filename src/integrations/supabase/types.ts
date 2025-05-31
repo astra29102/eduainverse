@@ -96,43 +96,49 @@ export type Database = {
         }
         Relationships: []
       }
-      enrollments: {
-        Row: {
-          course_id: string | null
-          enrolled_at: string
-          id: string
-          progress: number | null
-          user_id: string | null
-        }
-        Insert: {
-          course_id?: string | null
-          enrolled_at?: string
-          id?: string
-          progress?: number | null
-          user_id?: string | null
-        }
-        Update: {
-          course_id?: string | null
-          enrolled_at?: string
-          id?: string
-          progress?: number | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "enrollments_course_id_fkey"
-            columns: ["course_id"]
-            isOneToOne: false
-            referencedRelation: "courses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "enrollments_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
+    enrollments: {
+  Row: {
+    id: string
+    course_id: string | null
+    user_id: string | null
+    enrolled_at: string
+    progress: number | null
+    total_videos: number
+    videos_watched: number
+  }
+  Insert: {
+    id?: string
+    course_id?: string | null
+    user_id?: string | null
+    enrolled_at?: string
+    progress?: number | null
+    total_videos?: number
+    videos_watched?: number
+  }
+  Update: {
+    id?: string
+    course_id?: string | null
+    user_id?: string | null
+    enrolled_at?: string
+    progress?: number | null
+    total_videos?: number
+    videos_watched?: number
+  }
+  Relationships: [
+    {
+      foreignKeyName: "enrollments_course_id_fkey"
+      columns: ["course_id"]
+      isOneToOne: false
+      referencedRelation: "courses"
+      referencedColumns: ["id"]
+    },
+    {
+      foreignKeyName: "enrollments_user_id_fkey"
+      columns: ["user_id"]
+      isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    },
           {
             foreignKeyName: "fk_enrollments_course_id"
             columns: ["course_id"]
@@ -147,8 +153,11 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
-        ]
-      }
+  ]
+
+
+}
+
       module_videos: {
         Row: {
           created_at: string
