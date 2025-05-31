@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '../../components/Layout';
@@ -105,11 +104,12 @@ const StudentMyLearning = () => {
 
         if (fallbackError) {
           console.error('MyLearning: Error fetching enrolled courses (fallback):', fallbackError);
+          setEnrolledCourses([]);
+          return;
         }
         
-        // Always set courses array regardless of fallback success/failure
+        // Always set courses array with default values for missing columns
         if (fallbackData && Array.isArray(fallbackData)) {
-          // Add default values for missing columns
           const enrollmentsWithDefaults = fallbackData.map(enrollment => ({
             ...enrollment,
             total_videos: 0,
