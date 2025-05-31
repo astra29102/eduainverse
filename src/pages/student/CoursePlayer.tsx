@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import Layout from '../../components/Layout';
@@ -324,9 +325,10 @@ const StudentCoursePlayer = () => {
     );
   }
 
-  const totalVideos = enrollment?.total_videos || modules.reduce((acc, module) => acc + (module.module_videos?.length || 0), 0);
-  const completedCount = enrollment?.videos_watched || completedVideos.length;
-  const currentProgress = enrollment?.progress || 0;
+  // Calculate progress based on videos_watched and total_videos
+  const totalVideos = modules.reduce((acc, module) => acc + (module.module_videos?.length || 0), 0);
+  const videosWatchedCount = completedVideos.length;
+  const calculatedProgress = totalVideos > 0 ? Math.round((videosWatchedCount / totalVideos) * 100) : 0;
 
   return (
     <Layout>
@@ -346,9 +348,9 @@ const StudentCoursePlayer = () => {
                 {course.title}
               </h1>
               <p className="text-slate-600">
-                Progress: <span className="font-semibold text-blue-600">{currentProgress}%</span> 
+                Progress: <span className="font-semibold text-blue-600">{calculatedProgress}%</span> 
                 <span className="text-slate-400 mx-2">•</span>
-                {completedCount}/{totalVideos} videos completed
+                {videosWatchedCount}/{totalVideos} videos completed
               </p>
             </div>
           </div>
