@@ -41,7 +41,6 @@ const StudentMyLearning = () => {
           id,
           course_id,
           user_id,
-          progress,
           enrolled_at,
           total_videos,
           videos_watched,
@@ -163,8 +162,14 @@ const StudentMyLearning = () => {
               const course = enrollment.courses;
               const videosWatched = enrollment.videos_watched || 0;
               const totalVideos = enrollment.total_videos || 0;
-              // Calculate progress based on videos_watched and total_videos
-              const calculatedProgress = totalVideos > 0 ? Math.round((videosWatched / totalVideos) * 100) : 0;
+              // Calculate progress dynamically from videos_watched and total_videos only
+              const dynamicProgress = totalVideos > 0 ? Math.round((videosWatched / totalVideos) * 100) : 0;
+              
+              console.log('MyLearning progress calculation for course:', course.id, {
+                videosWatched,
+                totalVideos,
+                dynamicProgress
+              });
               
               return (
                 <Card key={enrollment.course_id} className="group border-0 shadow-lg hover:shadow-2xl transition-all duration-500 bg-white/90 backdrop-blur-lg overflow-hidden">
@@ -199,12 +204,12 @@ const StudentMyLearning = () => {
                     <div className="space-y-3">
                       <div className="flex justify-between items-center">
                         <span className="text-sm font-semibold text-slate-700">Progress</span>
-                        <span className="text-sm font-bold text-blue-600">{calculatedProgress}%</span>
+                        <span className="text-sm font-bold text-blue-600">{dynamicProgress}%</span>
                       </div>
                       <div className="relative">
-                        <Progress value={calculatedProgress} className="h-2 bg-slate-100" />
+                        <Progress value={dynamicProgress} className="h-2 bg-slate-100" />
                         <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full" 
-                             style={{ width: `${calculatedProgress}%` }}></div>
+                             style={{ width: `${dynamicProgress}%` }}></div>
                       </div>
                       <div className="text-xs text-slate-500 text-center">
                         {videosWatched} of {totalVideos} videos completed
@@ -226,7 +231,7 @@ const StudentMyLearning = () => {
                       <Link to={`/student/learn/${course.id}`}>
                         <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300">
                           <Play className="w-4 h-4 mr-2" />
-                          {calculatedProgress > 0 ? 'Continue Learning' : 'Start Learning'}
+                          {dynamicProgress > 0 ? 'Continue Learning' : 'Start Learning'}
                         </Button>
                       </Link>
                       <Link to={`/student/courses/${course.id}`}>

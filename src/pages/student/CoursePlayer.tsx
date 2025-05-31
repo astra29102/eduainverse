@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import Layout from '../../components/Layout';
@@ -141,7 +142,7 @@ const StudentCoursePlayer = () => {
       
       const { data, error } = await supabase
         .from('enrollments')
-        .select('id, course_id, user_id, enrolled_at, progress, total_videos, videos_watched')
+        .select('id, course_id, user_id, enrolled_at, total_videos, videos_watched')
         .eq('user_id', user.id)
         .eq('course_id', courseId)
         .single();
@@ -162,7 +163,10 @@ const StudentCoursePlayer = () => {
 
       if (data) {
         console.log('Enrollment data fetched:', data);
-        setEnrollment(data);
+        setEnrollment({
+          ...data,
+          progress: 0 // We'll calculate this dynamically, not from DB
+        });
       }
     } catch (error) {
       console.error('Error fetching enrollment data:', error);
@@ -206,7 +210,7 @@ const StudentCoursePlayer = () => {
         const newCompletedVideos = completedVideos.filter(id => id !== videoId);
         setCompletedVideos(newCompletedVideos);
         
-        // Update enrollment progress with the actual count
+        // Update enrollment with the actual count
         await updateEnrollmentProgress(newCompletedVideos.length);
         
         toast({
@@ -237,7 +241,7 @@ const StudentCoursePlayer = () => {
         const newCompletedVideos = [...completedVideos, videoId];
         setCompletedVideos(newCompletedVideos);
 
-        // Update enrollment progress with the actual count
+        // Update enrollment with the actual count
         await updateEnrollmentProgress(newCompletedVideos.length);
 
         toast({
@@ -261,37 +265,38 @@ const StudentCoursePlayer = () => {
     try {
       // Calculate total videos in the course
       const totalVideos = modules.reduce((acc, module) => acc + (module.module_videos?.length || 0), 0);
-      const progressPercentage = totalVideos > 0 ? Math.round((actualVideosWatched / totalVideos) * 100) : 0;
       
-      console.log('Updating enrollment progress with actual data:', {
+      console.log('Updating enrollment - videos_watched count:', {
         actualVideosWatched,
         totalVideos,
-        progressPercentage
+        courseId,
+        userId: user.id
       });
 
+      // Only update videos_watched and total_videos, ignore progress column
       const { error } = await supabase
         .from('enrollments')
         .update({ 
           videos_watched: actualVideosWatched,
-          progress: progressPercentage,
           total_videos: totalVideos
         })
         .eq('user_id', user.id)
         .eq('course_id', courseId);
 
       if (error) {
-        console.error('Error updating enrollment progress:', error);
+        console.error('Error updating enrollment videos_watched count:', error);
         throw error;
       }
 
-      console.log('Enrollment progress updated successfully');
+      console.log('Enrollment videos_watched count updated successfully');
 
-      // Update local state
+      // Update local state (calculate progress dynamically)
+      const calculatedProgress = totalVideos > 0 ? Math.round((actualVideosWatched / totalVideos) * 100) : 0;
       setEnrollment(prev => prev ? {
         ...prev,
         total_videos: totalVideos,
         videos_watched: actualVideosWatched,
-        progress: progressPercentage
+        progress: calculatedProgress // Calculate dynamically, don't rely on DB value
       } : null);
 
     } catch (error) {
@@ -324,10 +329,17 @@ const StudentCoursePlayer = () => {
     );
   }
 
-  // Calculate progress based on videos_watched and total_videos
+  // Calculate progress dynamically based on completed videos vs total videos
   const totalVideos = modules.reduce((acc, module) => acc + (module.module_videos?.length || 0), 0);
   const videosWatchedCount = completedVideos.length;
-  const calculatedProgress = totalVideos > 0 ? Math.round((videosWatchedCount / totalVideos) * 100) : 0;
+  const dynamicProgress = totalVideos > 0 ? Math.round((videosWatchedCount / totalVideos) * 100) : 0;
+
+  console.log('Progress calculation:', {
+    completedVideos: videosWatchedCount,
+    totalVideos,
+    dynamicProgress,
+    enrollmentVideosWatched: enrollment?.videos_watched
+  });
 
   return (
     <Layout>
@@ -347,7 +359,7 @@ const StudentCoursePlayer = () => {
                 {course.title}
               </h1>
               <p className="text-slate-600">
-                Progress: <span className="font-semibold text-blue-600">{calculatedProgress}%</span> 
+                Progress: <span className="font-semibold text-blue-600">{dynamicProgress}%</span> 
                 <span className="text-slate-400 mx-2">•</span>
                 {videosWatchedCount}/{totalVideos} videos completed
               </p>
