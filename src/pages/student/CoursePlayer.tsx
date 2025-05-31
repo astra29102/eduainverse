@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import Layout from '../../components/Layout';
@@ -189,6 +190,8 @@ const StudentCoursePlayer = () => {
             videos_watched: 0, 
             progress: fallbackData.progress || 0 
           });
+        } else {
+          setEnrollment({ total_videos: 0, videos_watched: 0, progress: 0 });
         }
         return;
       }
