@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '../../components/Layout';
@@ -107,10 +105,7 @@ const StudentMyLearning = () => {
         if (fallbackError) {
           console.error('MyLearning: Error fetching enrolled courses (fallback):', fallbackError);
           setEnrolledCourses([]);
-          return;
-        }
-
-        if (fallbackData) {
+        } else if (fallbackData) {
           // Add default values for missing columns
           const enrollmentsWithDefaults = fallbackData.map(enrollment => ({
             ...enrollment,
