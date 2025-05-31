@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Heart, Users, Clock, Trash2, Star, ShoppingCart } from 'lucide-react';
+import { Heart, Users, Clock, Trash2, ShoppingCart } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '../../contexts/AuthContext';
@@ -49,7 +50,7 @@ const StudentWishlist = () => {
         .select(`
           id,
           course_id,
-          courses!wishlist_course_id_fkey (*)
+          courses:course_id (*)
         `)
         .eq('user_id', user.id);
 
@@ -59,8 +60,14 @@ const StudentWishlist = () => {
       }
 
       if (data) {
-        setWishlistItems(data);
-        console.log('Wishlist fetched successfully:', data.length);
+        // Filter out wishlist items with missing course data
+        const validWishlistItems = data.filter(item => 
+          item.courses && 
+          typeof item.courses === 'object' && 
+          !('error' in item.courses)
+        ) as WishlistItem[];
+        setWishlistItems(validWishlistItems);
+        console.log('Wishlist fetched successfully:', validWishlistItems.length);
       }
     } catch (error) {
       console.error('Error fetching wishlist:', error);

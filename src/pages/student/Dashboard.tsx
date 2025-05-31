@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
@@ -9,6 +8,7 @@ import { Progress } from '@/components/ui/progress';
 import { BookOpen, Heart, User, Play, TrendingUp, Award, Clock, Zap } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import Layout from '../../components/Layout';
+
 interface Course {
   id: string;
   title: string;
@@ -55,7 +55,7 @@ const StudentDashboard = () => {
     try {
       console.log('Dashboard: Starting data fetch for user:', user.id);
       
-      // Fetch enrolled courses with specific foreign key relationship
+      // Fetch enrolled courses with explicit foreign key relationship
       console.log('Dashboard: Fetching enrollments...');
       const { data: enrollments, error: enrollmentError } = await supabase
         .from('enrollments')
@@ -63,7 +63,7 @@ const StudentDashboard = () => {
           course_id,
           progress,
           enrolled_at,
-          courses!enrollments_course_id_fkey (
+          courses:course_id (
             id,
             title,
             description,
@@ -82,10 +82,12 @@ const StudentDashboard = () => {
       } else {
         console.log('Dashboard: Enrollments fetched successfully:', enrollments);
         if (enrollments && enrollments.length > 0) {
-          setEnrolledCourses(enrollments);
-          const completed = enrollments.filter(e => e.progress >= 100).length;
+          // Filter out enrollments with missing course data
+          const validEnrollments = enrollments.filter(e => e.courses && typeof e.courses === 'object' && !('error' in e.courses)) as Enrollment[];
+          setEnrolledCourses(validEnrollments);
+          const completed = validEnrollments.filter(e => e.progress >= 100).length;
           setCompletedCount(completed);
-          console.log('Dashboard: Found', enrollments.length, 'enrollments,', completed, 'completed');
+          console.log('Dashboard: Found', validEnrollments.length, 'enrollments,', completed, 'completed');
         } else {
           console.log('Dashboard: No enrollments found for user');
           setEnrolledCourses([]);

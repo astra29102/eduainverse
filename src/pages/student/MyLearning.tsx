@@ -9,27 +9,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '../../contexts/AuthContext';
 import { EnrollmentWithCourse } from '../../types/enrollment';
 
-interface Course {
-  id: string;
-  title: string;
-  description: string;
-  instructor: string;
-  difficulty: string;
-  duration: string;
-  thumbnail: string;
-  category: string;
-  enrollment_count: number;
-}
-
-interface Enrollment {
-  course_id: string;
-  progress: number;
-  enrolled_at: string;
-  total_videos: number;
-  videos_watched: number;
-  courses: Course;
-}
-
 const StudentMyLearning = () => {
   const { user } = useAuth();
   const [enrolledCourses, setEnrolledCourses] = useState<EnrollmentWithCourse[]>([]);
@@ -65,7 +44,7 @@ const StudentMyLearning = () => {
           enrolled_at,
           total_videos,
           videos_watched,
-          courses!enrollments_course_id_fkey (
+          courses:course_id (
             id,
             title,
             description,
@@ -88,7 +67,12 @@ const StudentMyLearning = () => {
 
       if (data && Array.isArray(data)) {
         console.log('MyLearning: Enrolled courses fetched successfully:', data.length, 'courses');
-        const validEnrollments = data.filter(enrollment => enrollment.courses) as EnrollmentWithCourse[];
+        // Filter out enrollments with missing course data and ensure proper typing
+        const validEnrollments = data.filter(enrollment => 
+          enrollment.courses && 
+          typeof enrollment.courses === 'object' && 
+          !('error' in enrollment.courses)
+        ) as EnrollmentWithCourse[];
         setEnrolledCourses(validEnrollments);
       } else {
         console.log('MyLearning: No enrolled courses found');
