@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import Layout from '../../components/Layout';
@@ -155,6 +154,7 @@ const StudentCoursePlayer = () => {
     if (!courseId || !user) return;
 
     try {
+      console.log('Fetching enrollment data for course:', courseId, 'user:', user.id);
       const { data, error } = await supabase
         .from('enrollments')
         .select('total_videos, videos_watched, progress')
@@ -164,15 +164,18 @@ const StudentCoursePlayer = () => {
 
       if (error) {
         console.error('Error fetching enrollment data:', error);
+        // If columns don't exist, create default enrollment data
+        setEnrollment({ total_videos: 0, videos_watched: 0, progress: 0 });
         return;
       }
 
       if (data) {
-        setEnrollment(data);
         console.log('Enrollment data fetched:', data);
+        setEnrollment(data);
       }
     } catch (error) {
       console.error('Error fetching enrollment data:', error);
+      setEnrollment({ total_videos: 0, videos_watched: 0, progress: 0 });
     }
   };
 
@@ -180,6 +183,7 @@ const StudentCoursePlayer = () => {
     if (!user || !courseId) return;
 
     const isCompleted = completedVideos.includes(videoId);
+    console.log('Toggling video completion:', videoId, 'isCompleted:', isCompleted);
 
     try {
       if (isCompleted) {
@@ -203,7 +207,7 @@ const StudentCoursePlayer = () => {
         const newCompletedVideos = completedVideos.filter(id => id !== videoId);
         setCompletedVideos(newCompletedVideos);
         
-        // Update enrollment videos_watched count
+        // Update enrollment progress
         await updateEnrollmentProgress(newCompletedVideos.length);
         
         toast({
@@ -234,7 +238,7 @@ const StudentCoursePlayer = () => {
         const newCompletedVideos = [...completedVideos, videoId];
         setCompletedVideos(newCompletedVideos);
 
-        // Update enrollment videos_watched count
+        // Update enrollment progress
         await updateEnrollmentProgress(newCompletedVideos.length);
 
         toast({
@@ -253,10 +257,11 @@ const StudentCoursePlayer = () => {
   };
 
   const updateEnrollmentProgress = async (videosWatched: number) => {
-    if (!courseId || !user || !enrollment) return;
+    if (!courseId || !user) return;
 
     try {
-      const totalVideos = enrollment.total_videos;
+      // Calculate total videos in the course
+      const totalVideos = modules.reduce((acc, module) => acc + (module.module_videos?.length || 0), 0);
       const progressPercentage = totalVideos > 0 ? Math.round((videosWatched / totalVideos) * 100) : 0;
       
       console.log('Updating enrollment progress:', {
@@ -265,25 +270,42 @@ const StudentCoursePlayer = () => {
         progressPercentage
       });
 
-      const { error } = await supabase
+      // Try to update enrollment with new columns
+      const { error: updateError } = await supabase
         .from('enrollments')
         .update({ 
           videos_watched: videosWatched,
-          progress: progressPercentage 
+          progress: progressPercentage,
+          total_videos: totalVideos
         })
         .eq('user_id', user.id)
         .eq('course_id', courseId);
 
-      if (error) {
-        console.error('Error updating enrollment progress:', error);
+      if (updateError) {
+        console.error('Error updating enrollment progress (trying fallback):', updateError);
+        // Fallback: update only progress if new columns don't exist
+        const { error: fallbackError } = await supabase
+          .from('enrollments')
+          .update({ progress: progressPercentage })
+          .eq('user_id', user.id)
+          .eq('course_id', courseId);
+
+        if (fallbackError) {
+          console.error('Error updating enrollment progress (fallback):', fallbackError);
+        } else {
+          console.log('Enrollment progress updated (fallback) successfully');
+        }
       } else {
-        setEnrollment(prev => prev ? {
-          ...prev,
-          videos_watched: videosWatched,
-          progress: progressPercentage
-        } : null);
         console.log('Enrollment progress updated successfully');
       }
+
+      // Update local state
+      setEnrollment(prev => ({
+        total_videos: totalVideos,
+        videos_watched: videosWatched,
+        progress: progressPercentage
+      }));
+
     } catch (error) {
       console.error('Error updating enrollment progress:', error);
     }
@@ -338,7 +360,7 @@ const StudentCoursePlayer = () => {
               <p className="text-slate-600">
                 Progress: <span className="font-semibold text-blue-600">{currentProgress}%</span> 
                 <span className="text-slate-400 mx-2">•</span>
-                {enrollment?.videos_watched || 0}/{enrollment?.total_videos || totalVideos} videos completed
+                {enrollment?.videos_watched || completedCount}/{enrollment?.total_videos || totalVideos} videos completed
               </p>
             </div>
           </div>

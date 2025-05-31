@@ -53,6 +53,8 @@ const StudentMyLearning = () => {
 
     try {
       console.log('MyLearning: Starting course fetch for user:', user.id);
+      
+      // Try to fetch with new columns first
       const { data, error } = await supabase
         .from('enrollments')
         .select(`
@@ -77,7 +79,44 @@ const StudentMyLearning = () => {
         .order('enrolled_at', { ascending: false });
 
       if (error) {
-        console.error('MyLearning: Error fetching enrolled courses:', error);
+        console.error('MyLearning: Error fetching enrolled courses (trying fallback):', error);
+        // Fallback query without new columns
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('enrollments')
+          .select(`
+            course_id,
+            progress,
+            enrolled_at,
+            courses!enrollments_course_id_fkey (
+              id,
+              title,
+              description,
+              instructor,
+              difficulty,
+              duration,
+              thumbnail,
+              category,
+              enrollment_count
+            )
+          `)
+          .eq('user_id', user.id)
+          .order('enrolled_at', { ascending: false });
+
+        if (fallbackError) {
+          console.error('MyLearning: Error fetching enrolled courses (fallback):', fallbackError);
+          return;
+        }
+
+        if (fallbackData) {
+          // Add default values for missing columns
+          const enrollmentsWithDefaults = fallbackData.map(enrollment => ({
+            ...enrollment,
+            total_videos: 0,
+            videos_watched: 0
+          }));
+          console.log('MyLearning: Enrolled courses fetched successfully (fallback):', enrollmentsWithDefaults.length, 'courses');
+          setEnrolledCourses(enrollmentsWithDefaults);
+        }
         return;
       }
 
