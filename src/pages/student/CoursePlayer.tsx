@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import Layout from '../../components/Layout';
@@ -168,6 +169,7 @@ const StudentCoursePlayer = () => {
 
       if (data) {
         setEnrollment(data);
+        console.log('Enrollment data fetched:', data);
       }
     } catch (error) {
       console.error('Error fetching enrollment data:', error);
@@ -181,6 +183,7 @@ const StudentCoursePlayer = () => {
 
     try {
       if (isCompleted) {
+        // Mark video as incomplete
         const { error } = await supabase
           .from('user_progress')
           .delete()
@@ -189,6 +192,11 @@ const StudentCoursePlayer = () => {
 
         if (error) {
           console.error('Error marking video as incomplete:', error);
+          toast({
+            title: "Error",
+            description: "Failed to update video progress",
+            variant: "destructive"
+          });
           return;
         }
 
@@ -203,6 +211,7 @@ const StudentCoursePlayer = () => {
           description: "You can re-watch this video anytime",
         });
       } else {
+        // Mark video as complete
         const { error } = await supabase
           .from('user_progress')
           .upsert([{
@@ -214,6 +223,11 @@ const StudentCoursePlayer = () => {
 
         if (error) {
           console.error('Error marking video as complete:', error);
+          toast({
+            title: "Error",
+            description: "Failed to update video progress",
+            variant: "destructive"
+          });
           return;
         }
 
@@ -230,6 +244,11 @@ const StudentCoursePlayer = () => {
       }
     } catch (error) {
       console.error('Error toggling video completion:', error);
+      toast({
+        title: "Error",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
