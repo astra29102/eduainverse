@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import Layout from '../../components/Layout';
@@ -155,6 +156,8 @@ const StudentCoursePlayer = () => {
 
     try {
       console.log('Fetching enrollment data for course:', courseId, 'user:', user.id);
+      
+      // Try to fetch with new columns first
       const { data, error } = await supabase
         .from('enrollments')
         .select('total_videos, videos_watched, progress')
@@ -163,15 +166,38 @@ const StudentCoursePlayer = () => {
         .single();
 
       if (error) {
-        console.error('Error fetching enrollment data:', error);
-        // If columns don't exist, create default enrollment data
-        setEnrollment({ total_videos: 0, videos_watched: 0, progress: 0 });
+        console.error('Error fetching enrollment data (trying fallback):', error);
+        
+        // Fallback: try without new columns
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('enrollments')
+          .select('progress')
+          .eq('user_id', user.id)
+          .eq('course_id', courseId)
+          .single();
+
+        if (fallbackError) {
+          console.error('Error fetching enrollment data (fallback):', fallbackError);
+          setEnrollment({ total_videos: 0, videos_watched: 0, progress: 0 });
+          return;
+        }
+
+        if (fallbackData) {
+          console.log('Enrollment data fetched (fallback):', fallbackData);
+          setEnrollment({ 
+            total_videos: 0, 
+            videos_watched: 0, 
+            progress: fallbackData.progress || 0 
+          });
+        }
         return;
       }
 
       if (data) {
         console.log('Enrollment data fetched:', data);
         setEnrollment(data);
+      } else {
+        setEnrollment({ total_videos: 0, videos_watched: 0, progress: 0 });
       }
     } catch (error) {
       console.error('Error fetching enrollment data:', error);

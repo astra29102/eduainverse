@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '../../components/Layout';
@@ -104,6 +105,7 @@ const StudentMyLearning = () => {
 
         if (fallbackError) {
           console.error('MyLearning: Error fetching enrolled courses (fallback):', fallbackError);
+          setEnrolledCourses([]);
           return;
         }
 
@@ -129,6 +131,7 @@ const StudentMyLearning = () => {
       }
     } catch (error) {
       console.error('MyLearning: Error fetching enrolled courses:', error);
+      setEnrolledCourses([]);
     } finally {
       setLoading(false);
       console.log('MyLearning: Course fetch completed');
