@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '../../components/Layout';
@@ -50,7 +49,7 @@ const StudentWishlist = () => {
         .select(`
           id,
           course_id,
-          courses:course_id (*)
+          courses!wishlist_course_id_fkey (*)
         `)
         .eq('user_id', user.id);
 
@@ -64,7 +63,8 @@ const StudentWishlist = () => {
         const validWishlistItems = data.filter(item => 
           item.courses && 
           typeof item.courses === 'object' && 
-          !('error' in item.courses)
+          !('error' in item.courses) &&
+          item.courses !== null
         ) as WishlistItem[];
         setWishlistItems(validWishlistItems);
         console.log('Wishlist fetched successfully:', validWishlistItems.length);

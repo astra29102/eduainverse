@@ -63,7 +63,7 @@ const StudentDashboard = () => {
           course_id,
           progress,
           enrolled_at,
-          courses:course_id (
+          courses!enrollments_course_id_fkey (
             id,
             title,
             description,
@@ -83,7 +83,12 @@ const StudentDashboard = () => {
         console.log('Dashboard: Enrollments fetched successfully:', enrollments);
         if (enrollments && enrollments.length > 0) {
           // Filter out enrollments with missing course data
-          const validEnrollments = enrollments.filter(e => e.courses && typeof e.courses === 'object' && !('error' in e.courses)) as Enrollment[];
+          const validEnrollments = enrollments.filter(e => 
+            e.courses && 
+            typeof e.courses === 'object' && 
+            !('error' in e.courses) &&
+            e.courses !== null
+          ) as Enrollment[];
           setEnrolledCourses(validEnrollments);
           const completed = validEnrollments.filter(e => e.progress >= 100).length;
           setCompletedCount(completed);

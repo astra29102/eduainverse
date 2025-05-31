@@ -44,7 +44,7 @@ const StudentMyLearning = () => {
           enrolled_at,
           total_videos,
           videos_watched,
-          courses:course_id (
+          courses!enrollments_course_id_fkey (
             id,
             title,
             description,
@@ -71,7 +71,8 @@ const StudentMyLearning = () => {
         const validEnrollments = data.filter(enrollment => 
           enrollment.courses && 
           typeof enrollment.courses === 'object' && 
-          !('error' in enrollment.courses)
+          !('error' in enrollment.courses) &&
+          enrollment.courses !== null
         ) as EnrollmentWithCourse[];
         setEnrolledCourses(validEnrollments);
       } else {
