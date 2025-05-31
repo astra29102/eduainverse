@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import Layout from '../../components/Layout';
@@ -207,7 +206,7 @@ const StudentCoursePlayer = () => {
         const newCompletedVideos = completedVideos.filter(id => id !== videoId);
         setCompletedVideos(newCompletedVideos);
         
-        // Update enrollment progress
+        // Update enrollment progress with the actual count
         await updateEnrollmentProgress(newCompletedVideos.length);
         
         toast({
@@ -238,7 +237,7 @@ const StudentCoursePlayer = () => {
         const newCompletedVideos = [...completedVideos, videoId];
         setCompletedVideos(newCompletedVideos);
 
-        // Update enrollment progress
+        // Update enrollment progress with the actual count
         await updateEnrollmentProgress(newCompletedVideos.length);
 
         toast({
@@ -256,16 +255,16 @@ const StudentCoursePlayer = () => {
     }
   };
 
-  const updateEnrollmentProgress = async (videosWatched: number) => {
+  const updateEnrollmentProgress = async (actualVideosWatched: number) => {
     if (!courseId || !user) return;
 
     try {
       // Calculate total videos in the course
       const totalVideos = modules.reduce((acc, module) => acc + (module.module_videos?.length || 0), 0);
-      const progressPercentage = totalVideos > 0 ? Math.round((videosWatched / totalVideos) * 100) : 0;
+      const progressPercentage = totalVideos > 0 ? Math.round((actualVideosWatched / totalVideos) * 100) : 0;
       
-      console.log('Updating enrollment progress:', {
-        videosWatched,
+      console.log('Updating enrollment progress with actual data:', {
+        actualVideosWatched,
         totalVideos,
         progressPercentage
       });
@@ -273,7 +272,7 @@ const StudentCoursePlayer = () => {
       const { error } = await supabase
         .from('enrollments')
         .update({ 
-          videos_watched: videosWatched,
+          videos_watched: actualVideosWatched,
           progress: progressPercentage,
           total_videos: totalVideos
         })
@@ -291,7 +290,7 @@ const StudentCoursePlayer = () => {
       setEnrollment(prev => prev ? {
         ...prev,
         total_videos: totalVideos,
-        videos_watched: videosWatched,
+        videos_watched: actualVideosWatched,
         progress: progressPercentage
       } : null);
 
