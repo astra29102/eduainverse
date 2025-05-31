@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import Layout from '../../components/Layout';
@@ -177,17 +178,16 @@ const StudentCoursePlayer = () => {
 
         if (fallbackError) {
           console.error('Error fetching enrollment data (fallback):', fallbackError);
-          setEnrollment({ total_videos: 0, videos_watched: 0, progress: 0 });
-        } else if (fallbackData) {
-          console.log('Enrollment data fetched (fallback):', fallbackData);
-          setEnrollment({ 
-            total_videos: 0, 
-            videos_watched: 0, 
-            progress: fallbackData.progress || 0 
-          });
-        } else {
-          setEnrollment({ total_videos: 0, videos_watched: 0, progress: 0 });
         }
+        
+        // Always set default values regardless of fallback success/failure
+        const defaultEnrollment = { 
+          total_videos: 0, 
+          videos_watched: 0, 
+          progress: fallbackData?.progress || 0 
+        };
+        console.log('Setting default enrollment data:', defaultEnrollment);
+        setEnrollment(defaultEnrollment);
         return;
       }
 
